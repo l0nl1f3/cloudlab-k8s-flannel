@@ -52,11 +52,31 @@ pc.verifyParameters()
 request = pc.makeRequestRSpec()
 
 
-def create_node(name, nodes, lan):
+def create_worker(name, nodes, lan):
     # Create node
     node = request.XenVM(name)
     node.cores = 1
     node.ram = 16384
+    node.disk_image = IMAGE
+
+    # Add interface
+    iface = node.addInterface("if1")
+    iface.addAddress(rspec.IPv4Address("{}.{}".format(
+        BASE_IP, 1 + len(nodes)), "255.255.255.0"))
+    lan.addInterface(iface)
+
+    # Add extra storage space
+    bs = node.Blockstore(name + "-bs", "/mydata")
+    bs.size = str(params.tempFileSystemSize) + "GB"
+    bs.placement = "any"
+
+    # Add to node list
+    nodes.append(node)
+
+
+def create_master(name, nodes, lan):
+    # Create node
+    node = request.RawPC(name)
     node.disk_image = IMAGE
     node.hardware_type = params.nodeType
 
@@ -82,9 +102,12 @@ lan.bandwidth = BANDWIDTH
 # Create nodes
 # The start script relies on the idea that the primary node is 10.10.1.1, and subsequent nodes follow the
 # pattern 10.10.1.2, 10.10.1.3, ...
-for i in range(params.nodeCount):
+
+create_master("node1", nodes, lan)
+
+for i in range(1, params.nodeCount):
     name = "node"+str(i+1)
-    create_node(name, nodes, lan)
+    create_worker(name, nodes, lan)
 
 # Iterate over secondary nodes first
 for i, node in enumerate(nodes[1:]):
