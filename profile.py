@@ -24,16 +24,22 @@ pc.defineParameter("nodeCount",
                    "Number of nodes in the experiment. It is recommended that at least 3 be used.",
                    portal.ParameterType.INTEGER,
                    3)
-pc.defineParameter("nodeType",
-                   "Node Hardware Type",
+pc.defineParameter("masterNodeType",
+                   "Master Node Hardware Type",
                    portal.ParameterType.NODETYPE,
                    "m510",
-                   longDescription="A specific hardware type to use for all nodes. This profile has primarily been tested with m510 and xl170 nodes.")
+                   longDescription="A specific hardware type to use for master node. This profile has primarily been tested with m510 and xl170 nodes.")
 pc.defineParameter("startKubernetes",
                    "Create Kubernetes cluster",
                    portal.ParameterType.BOOLEAN,
                    True,
                    longDescription="Create a Kubernetes cluster using default image setup (calico networking, etc.)")
+pc.defineParameter("workerRAM",
+                   "RAM in MB for every worker node",
+                   portal.ParameterType.INTEGER,
+                   8192,
+                   longDescription="Allocated RAM volumn for each worker node")
+
 # Below option copy/pasted directly from small-lan experiment on CloudLab
 # Optional ephemeral blockstore
 pc.defineParameter("tempFileSystemSize",
@@ -56,18 +62,17 @@ def create_worker(name, nodes, lan):
     # Create node
     node = request.XenVM(name)
     node.cores = 1
-    node.ram = 16384
+    node.ram = params.workerRAM
     node.disk_image = IMAGE
-    node.disk = 32
     # Add interface
     iface = node.addInterface("if1")
     iface.addAddress(rspec.IPv4Address("{}.{}".format(
         BASE_IP, 1 + len(nodes)), "255.255.255.0"))
     lan.addInterface(iface)
     # Add extra storage space
-    # bs = node.Blockstore(name + "-bs", "/mydata")
-    # bs.size = str(params.tempFileSystemSize) + "GB"
-    # bs.placement = "any"
+    bs = node.Blockstore(name + "-bs", "/mydata")
+    bs.size = str(params.tempFileSystemSize) + "GB"
+    bs.placement = "any"
 
     # Add to node list
     nodes.append(node)
