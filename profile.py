@@ -24,16 +24,19 @@ pc.defineParameter("nodeCount",
                    "Number of nodes in the experiment. It is recommended that at least 3 be used.",
                    portal.ParameterType.INTEGER,
                    3)
+
 pc.defineParameter("masterNodeType",
                    "Master Node Hardware Type",
                    portal.ParameterType.NODETYPE,
                    "m510",
                    longDescription="A specific hardware type to use for master node. This profile has primarily been tested with m510 and xl170 nodes.")
+
 pc.defineParameter("startKubernetes",
                    "Create Kubernetes cluster",
                    portal.ParameterType.BOOLEAN,
                    True,
                    longDescription="Create a Kubernetes cluster using default image setup (calico networking, etc.)")
+
 pc.defineParameter("workerRAM",
                    "RAM in MB for every worker node",
                    portal.ParameterType.INTEGER,
@@ -82,7 +85,7 @@ def create_master(name, nodes, lan):
     # Create node
     node = request.RawPC(name)
     node.disk_image = IMAGE
-    node.hardware_type = params.nodeType
+    node.hardware_type = params.masterNodeType
 
     # Add interface
     iface = node.addInterface("if1")
