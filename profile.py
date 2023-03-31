@@ -58,17 +58,16 @@ def create_worker(name, nodes, lan):
     node.cores = 1
     node.ram = 16384
     node.disk_image = IMAGE
-
+    node.disk = 32
     # Add interface
     iface = node.addInterface("if1")
     iface.addAddress(rspec.IPv4Address("{}.{}".format(
         BASE_IP, 1 + len(nodes)), "255.255.255.0"))
     lan.addInterface(iface)
-
     # Add extra storage space
-    bs = node.Blockstore(name + "-bs", "/mydata")
-    bs.size = str(params.tempFileSystemSize) + "GB"
-    bs.placement = "any"
+    # bs = node.Blockstore(name + "-bs", "/mydata")
+    # bs.size = str(params.tempFileSystemSize) + "GB"
+    # bs.placement = "any"
 
     # Add to node list
     nodes.append(node)
