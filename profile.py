@@ -20,13 +20,13 @@ IMAGE = 'urn:publicid:IDN+utah.cloudlab.us+image+cuadvnetfall2022-PG0:k8s-flanne
 
 # Set up parameters
 pc = portal.Context()
-pc.defineParameter("nodeCount", 
+pc.defineParameter("nodeCount",
                    "Number of nodes in the experiment. It is recommended that at least 3 be used.",
-                   portal.ParameterType.INTEGER, 
+                   portal.ParameterType.INTEGER,
                    3)
-pc.defineParameter("nodeType", 
+pc.defineParameter("nodeType",
                    "Node Hardware Type",
-                   portal.ParameterType.NODETYPE, 
+                   portal.ParameterType.NODETYPE,
                    "m510",
                    longDescription="A specific hardware type to use for all nodes. This profile has primarily been tested with m510 and xl170 nodes.")
 pc.defineParameter("startKubernetes",
@@ -36,9 +36,9 @@ pc.defineParameter("startKubernetes",
                    longDescription="Create a Kubernetes cluster using default image setup (calico networking, etc.)")
 # Below option copy/pasted directly from small-lan experiment on CloudLab
 # Optional ephemeral blockstore
-pc.defineParameter("tempFileSystemSize", 
+pc.defineParameter("tempFileSystemSize",
                    "Temporary Filesystem Size",
-                   portal.ParameterType.INTEGER, 
+                   portal.ParameterType.INTEGER,
                    0,
                    advanced=True,
                    longDescription="The size in GB of a temporary file system to mount on each of your " +
@@ -51,24 +51,29 @@ params = pc.bindParameters()
 pc.verifyParameters()
 request = pc.makeRequestRSpec()
 
+
 def create_node(name, nodes, lan):
-  # Create node
-  node = request.RawPC(name)
-  node.disk_image = IMAGE
-  node.hardware_type = params.nodeType
-  
-  # Add interface
-  iface = node.addInterface("if1")
-  iface.addAddress(rspec.IPv4Address("{}.{}".format(BASE_IP, 1 + len(nodes)), "255.255.255.0"))
-  lan.addInterface(iface)
-  
-  # Add extra storage space
-  bs = node.Blockstore(name + "-bs", "/mydata")
-  bs.size = str(params.tempFileSystemSize) + "GB"
-  bs.placement = "any"
-  
-  # Add to node list
-  nodes.append(node)
+    # Create node
+    node = request.XenVM(name)
+    node.cores = 1
+    node.ram = 16384
+    node.disk_image = IMAGE
+    node.hardware_type = params.nodeType
+
+    # Add interface
+    iface = node.addInterface("if1")
+    iface.addAddress(rspec.IPv4Address("{}.{}".format(
+        BASE_IP, 1 + len(nodes)), "255.255.255.0"))
+    lan.addInterface(iface)
+
+    # Add extra storage space
+    bs = node.Blockstore(name + "-bs", "/mydata")
+    bs.size = str(params.tempFileSystemSize) + "GB"
+    bs.placement = "any"
+
+    # Add to node list
+    nodes.append(node)
+
 
 nodes = []
 lan = request.LAN()
@@ -84,10 +89,10 @@ for i in range(params.nodeCount):
 # Iterate over secondary nodes first
 for i, node in enumerate(nodes[1:]):
     node.addService(rspec.Execute(shell="bash", command="/local/repository/start.sh secondary {}.{} {} > /home/k8s-flannel/start.log 2>&1 &".format(
-      BASE_IP, i + 2, params.startKubernetes)))
+        BASE_IP, i + 2, params.startKubernetes)))
 
 # Start primary node
 nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary {}.1 {} {} > /home/k8s-flannel/start.log 2>&1".format(
-  BASE_IP, params.nodeCount, params.startKubernetes)))
+    BASE_IP, params.nodeCount, params.startKubernetes)))
 
 pc.printRequestRSpec()
