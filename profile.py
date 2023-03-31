@@ -15,7 +15,7 @@ import geni.portal as portal
 import geni.rspec.pg as rspec
 
 BASE_IP = "10.10.1"
-BANDWIDTH = 10000000
+BANDWIDTH = 100000
 IMAGE = 'urn:publicid:IDN+utah.cloudlab.us+image+cuadvnetfall2022-PG0:k8s-flannel:1'
 
 # Set up parameters
@@ -55,6 +55,13 @@ pc.defineParameter("tempFileSystemSize",
                    "The images provided by the system have small root partitions, so use this option " +
                    "if you expect you will need more space to build your software packages or store " +
                    "temporary files. 0 GB indicates maximum size.")
+
+pc.defineParameter("sameSwitch",  "No Interswitch Links", portal.ParameterType.BOOLEAN, False,
+                   advanced=True,
+                   longDescription="Sometimes you want all the nodes connected to the same switch. " +
+                   "This option will ask the resource mapper to do that, although it might make " +
+                   "it imppossible to find a solution. Do not use this unless you are sure you need it!")
+
 params = pc.bindParameters()
 
 pc.verifyParameters()
@@ -105,7 +112,8 @@ def create_master(name, nodes, lan):
 nodes = []
 lan = request.LAN()
 lan.bandwidth = BANDWIDTH
-
+if params.sameSwitch:
+    lan.setNoInterSwitchLinks()
 # Create nodes
 # The start script relies on the idea that the primary node is 10.10.1.1, and subsequent nodes follow the
 # pattern 10.10.1.2, 10.10.1.3, ...
