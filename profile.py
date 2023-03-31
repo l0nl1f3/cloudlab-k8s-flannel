@@ -42,13 +42,18 @@ pc.defineParameter("workerRAM",
                    portal.ParameterType.INTEGER,
                    8192,
                    longDescription="Allocated RAM volumn for each worker node")
+pc.defineParameter("corePerVM",
+                   "allocated core for every worker node",
+                   portal.ParameterType.INTEGER,
+                   1,
+                   longDescription="How many cores does each vm worker node have")
 
 # Below option copy/pasted directly from small-lan experiment on CloudLab
 # Optional ephemeral blockstore
 pc.defineParameter("tempFileSystemSize",
                    "Temporary Filesystem Size",
                    portal.ParameterType.INTEGER,
-                   0,
+                   5,
                    advanced=True,
                    longDescription="The size in GB of a temporary file system to mount on each of your " +
                    "nodes. Temporary means that they are deleted when your experiment is terminated. " +
@@ -71,7 +76,7 @@ request = pc.makeRequestRSpec()
 def create_worker(name, nodes, lan):
     # Create node
     node = request.XenVM(name)
-    node.cores = 1
+    node.cores = params.corePerVM
     node.ram = params.workerRAM
     node.disk_image = IMAGE
     # Add interface
