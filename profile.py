@@ -112,8 +112,8 @@ def create_master(name, nodes, lan):
 nodes = []
 lan = request.LAN()
 lan.bandwidth = BANDWIDTH
-if params.sameSwitch:
-    lan.setNoInterSwitchLinks()
+# if params.sameSwitch:
+#     lan.setNoInterSwitchLinks()
 # Create nodes
 # The start script relies on the idea that the primary node is 10.10.1.1, and subsequent nodes follow the
 # pattern 10.10.1.2, 10.10.1.3, ...
