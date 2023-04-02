@@ -23,13 +23,16 @@ pc = portal.Context()
 pc.defineParameter("nodeCount",
                    "Number of nodes in the experiment. It is recommended that at least 3 be used.",
                    portal.ParameterType.INTEGER,
-                   3)
-
-pc.defineParameter("masterNodeType",
+                   2)
+pc.defineParameter("coreCount",
+                   "Number of cores in each worker node.",
+                   portal.ParameterType.INTEGER,
+                   8)
+pc.defineParameter("nodeType",
                    "Master Node Hardware Type",
                    portal.ParameterType.NODETYPE,
                    "m510",
-                   longDescription="A specific hardware type to use for master node. This profile has primarily been tested with m510 and xl170 nodes.")
+                   longDescription="A specific hardware type to use for node. This profile has primarily been tested with m510 and xl170 nodes.")
 
 pc.defineParameter("startKubernetes",
                    "Create Kubernetes cluster",
@@ -40,7 +43,7 @@ pc.defineParameter("startKubernetes",
 pc.defineParameter("workerRAM",
                    "RAM in MB for every worker node",
                    portal.ParameterType.INTEGER,
-                   8192,
+                   4096,
                    longDescription="Allocated RAM volumn for each worker node")
 pc.defineParameter("corePerVM",
                    "allocated core for every worker node",
@@ -61,35 +64,32 @@ pc.defineParameter("tempFileSystemSize",
                    "if you expect you will need more space to build your software packages or store " +
                    "temporary files. 0 GB indicates maximum size.")
 
-pc.defineParameter("sameSwitch",  "No Interswitch Links", portal.ParameterType.BOOLEAN, False,
-                   advanced=True,
-                   longDescription="Sometimes you want all the nodes connected to the same switch. " +
-                   "This option will ask the resource mapper to do that, although it might make " +
-                   "it imppossible to find a solution. Do not use this unless you are sure you need it!")
-
 params = pc.bindParameters()
 
 pc.verifyParameters()
 request = pc.makeRequestRSpec()
 
 
-def create_worker(name, nodes, lan):
+def create_worker(name, nodes, pnode, lan):
     # Create node
     node = request.XenVM(name)
     node.cores = params.corePerVM
     node.ram = params.workerRAM
     node.disk_image = IMAGE
+    node.exclusive = True
     # Add interface
     iface = node.addInterface("if1")
     iface.addAddress(rspec.IPv4Address("{}.{}".format(
         BASE_IP, 1 + len(nodes)), "255.255.255.0"))
     lan.addInterface(iface)
+
     # Add extra storage space
     bs = node.Blockstore(name + "-bs", "/mydata")
     bs.size = str(params.tempFileSystemSize) + "GB"
     bs.placement = "any"
 
     # Add to node list
+    node.InstantiateOn(pnode)
     nodes.append(node)
 
 
@@ -97,7 +97,7 @@ def create_master(name, nodes, lan):
     # Create node
     node = request.RawPC(name)
     node.disk_image = IMAGE
-    node.hardware_type = params.masterNodeType
+    node.hardware_type = params.nodeType
 
     # Add interface
     iface = node.addInterface("if1")
@@ -125,9 +125,19 @@ lan.bandwidth = BANDWIDTH
 
 create_master("node1", nodes, lan)
 
+total_cores = (params.nodeCount - 1) * params.coreCount
+
+worker_hosts = []
+node_id = 2
 for i in range(1, params.nodeCount):
-    name = "node"+str(i+1)
-    create_worker(name, nodes, lan)
+    pnode = request.RawPC("pnode" + str(i))
+    pnode.hardware_type = params.nodeType
+    worker_hosts.append(pnode)
+
+    for c in range(params.coreCount):
+        name = "node" + str(node_id)
+        node_id += 1
+        create_worker(name, nodes, pnode, lan)
 
 # Iterate over secondary nodes first
 for i, node in enumerate(nodes[1:]):
