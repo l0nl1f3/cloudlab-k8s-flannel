@@ -141,10 +141,10 @@ for i in range(1, params.nodeCount):
     if params.ifExclusive:
         pnode = request.RawPC("pnode" + str(i))
         pnode.hardware_type = params.nodeType
-        iface = pnode.addInterface("if1")
-        iface.addAddress(rspec.IPv4Address("{}.{}".format(
-            BASE_IP, 1 + total_cores + i), "255.255.255.0"))
-        lan.addInterface(iface)
+        # iface = pnode.addInterface("if1")
+        # iface.addAddress(rspec.IPv4Address("{}.{}".format(
+        #     BASE_IP, 1 + total_cores + i), "255.255.255.0"))
+        # lan.addInterface(iface)
 
     for c in range(params.coreCount):
         name = "node" + str(node_id)
