@@ -13,6 +13,7 @@ import time
 import geni.portal as portal
 # Import the ProtoGENI library.
 import geni.rspec.pg as rspec
+import geni.rspec.emulab as emulab
 
 BASE_IP = "10.10.1"
 BANDWIDTH = 100000
@@ -27,7 +28,7 @@ pc.defineParameter("nodeCount",
 pc.defineParameter("coreCount",
                    "Number of cores in each worker node.",
                    portal.ParameterType.INTEGER,
-                   8)
+                   4)
 pc.defineParameter("nodeType",
                    "Master Node Hardware Type",
                    portal.ParameterType.NODETYPE,
