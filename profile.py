@@ -41,6 +41,12 @@ pc.defineParameter("startKubernetes",
                    True,
                    longDescription="Create a Kubernetes cluster using default image setup (calico networking, etc.)")
 
+pc.defineParameter("ifExclusive",
+                   "Exclusive access to physical node",
+                   portal.ParameterType.BOOLEAN,
+                   True,
+                   longDescription="If the physical node that hosted vm should be exclusive")
+
 pc.defineParameter("workerRAM",
                    "RAM in MB for every worker node",
                    portal.ParameterType.INTEGER,
@@ -77,7 +83,7 @@ def create_worker(name, nodes, pnode, lan):
     node.cores = params.corePerVM
     node.ram = params.workerRAM
     node.disk_image = IMAGE
-    node.exclusive = True
+    node.exclusive = params.ifExclusive
     # Add interface
     iface = node.addInterface("if1")
     iface.addAddress(rspec.IPv4Address("{}.{}".format(
@@ -90,7 +96,8 @@ def create_worker(name, nodes, pnode, lan):
     bs.placement = "any"
 
     # Add to node list
-    node.InstantiateOn(pnode)
+    if params.ifExclusive:
+        node.InstantiateOn(pnode)
     nodes.append(node)
 
 
@@ -128,17 +135,16 @@ create_master("node1", nodes, lan)
 
 total_cores = (params.nodeCount - 1) * params.coreCount
 
-worker_hosts = []
 node_id = 2
 for i in range(1, params.nodeCount):
-    pnode = request.RawPC("pnode" + str(i))
-    pnode.hardware_type = params.nodeType
-    iface = pnode.addInterface("if1")
-    iface.addAddress(rspec.IPv4Address("{}.{}".format(
-        BASE_IP, 1 + total_cores + i), "255.255.255.0"))
-    lan.addInterface(iface)
-
-    worker_hosts.append(pnode)
+    pnode = None
+    if params.ifExclusive:
+        pnode = request.RawPC("pnode" + str(i))
+        pnode.hardware_type = params.nodeType
+        iface = pnode.addInterface("if1")
+        iface.addAddress(rspec.IPv4Address("{}.{}".format(
+            BASE_IP, 1 + total_cores + i), "255.255.255.0"))
+        lan.addInterface(iface)
 
     for c in range(params.coreCount):
         name = "node" + str(node_id)
