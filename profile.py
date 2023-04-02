@@ -158,6 +158,6 @@ for i, node in enumerate(nodes[1:]):
 
 # Start primary node
 nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary {}.1 {} {} > /home/k8s-flannel/start.log 2>&1".format(
-    BASE_IP, params.total_cores + 1, params.startKubernetes)))
+    BASE_IP, total_cores + 1, params.startKubernetes)))
 
 pc.printRequestRSpec()
