@@ -97,43 +97,6 @@ setup_primary() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
 }
 
-apply_flannel() {
-    kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml >> $INSTALL_DIR/flannel_install.log 2>&1
-    if [ $? -ne 0 ]; then
-       echo "***Error: Error when installing flannel. Logs in $INSTALL_DIR/flannel_install.log"
-       exit 1
-    fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Flannel networking"
-
-    # wait for flannel pods to be in ready state
-    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for flannel pods to have status of 'Running': "
-    NUM_PODS=$(kubectl get pods -n kube-flannel | wc -l)
-    NUM_RUNNING=$(kubectl get pods -n kube-flannel | grep " Running" | wc -l)
-    NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
-    while [ "$NUM_RUNNING" -ne 0 ]
-    do
-        sleep 1
-        printf "."
-        NUM_RUNNING=$(kubectl get pods -n kube-flannel | grep " Running" | wc -l)
-        NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
-    done
-    printf "%s: %s\n" "$(date +"%T.%N")" "Flannel pods running!"
-    
-    # wait for kube-system pods to be in ready state
-    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for all system pods to have status of 'Running': "
-    NUM_PODS=$(kubectl get pods -n kube-system | wc -l)
-    NUM_RUNNING=$(kubectl get pods -n kube-system | grep " Running" | wc -l)
-    NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
-    while [ "$NUM_RUNNING" -ne 0 ]
-    do
-        sleep 1
-        printf "."
-        NUM_RUNNING=$(kubectl get pods -n kube-system | grep " Running" | wc -l)
-        NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
-    done
-    printf "%s: %s\n" "$(date +"%T.%N")" "Kubernetes system pods running!"
-}
-
 add_cluster_nodes() {
     REMOTE_CMD=$(tail -n 2 $INSTALL_DIR/k8s_install.log)
     printf "%s: %s\n" "$(date +"%T.%N")" "Remote command is: $REMOTE_CMD"
@@ -169,39 +132,6 @@ add_cluster_nodes() {
         NUM_READY=$(($1-NUM_READY))
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
-}
-
-apply_multus() {
-    # Checkout multus directory. Always use same commit for stable environment
-    cd $INSTALL_DIR
-    git clone https://github.com/k8snetworkplumbingwg/multus-cni.git
-    cd multus-cni
-    git checkout $MULTUS_COMMIT
-    
-    # Enable namespace isolation
-    sudo sed -i '163 i \            - "-namespace-isolation=true"' deployments/multus-daemonset-thick.yml
-    
-    # Install multus
-    cat ./deployments/multus-daemonset-thick.yml | kubectl apply -f - >> $INSTALL_DIR/multus_install.log 2>&1
-    if [ $? -ne 0 ]; then
-       echo "***Error: Error when installing multus. Logs in $INSTALL_DIR/multus_install.log"
-       exit 1
-    fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied multus CNI plugin"
-
-    # wait for multus pods to be in ready state
-    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for flannel pods to have status of 'Running': "
-    NUM_PODS=$(kubectl get pods -n kube-system | grep multus | wc -l)
-    NUM_RUNNING=$(kubectl get pods -n kube-system | grep multus | grep " Running" | wc -l)
-    NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
-    while [ "$NUM_RUNNING" -ne 0 ]
-    do
-        sleep 1
-        printf "."
-        NUM_RUNNING=$(kubectl get pods -n kube-system | grep multus | grep " Running" | wc -l)
-        NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
-    done
-    printf "%s: %s\n" "$(date +"%T.%N")" "Multus pods running!"
 }
 
 
@@ -282,12 +212,6 @@ sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.
 # Finish setting up the primary node
 # Argument is node_ip
 setup_primary $2
-
-# Apply flannel networking
-apply_flannel
-
-# Install multus CNI plugin
-apply_multus
 
 # Coordinate master to add nodes to the kubernetes cluster
 # Argument is number of nodes
